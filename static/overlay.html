@@ -1,0 +1,40 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">  
+<html>
+    <head>  
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@500&display=swap" rel="stylesheet">
+        <style>  
+        body {
+            color: #f5ca4a;
+        }
+        #bottom_scroller {
+            position: absolute;
+            bottom: 0;
+            left: 50px;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        #clock {
+            font-family: 'Roboto', sans-serif;
+            text-align: right;
+            margin-right: 50px;
+        }
+        #clock, img {
+            vertical-align:middle;
+        }
+
+         </style>  
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />  
+        <title>Untitled Document</title>  
+    </head>  
+    <body>
+        <div id="clock"></div>
+        <div id="bottom_scroller"></div>
+
+        <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+        <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+        <script src="https://unpkg.com/babel-standalone@6/babel.min.js" crossorigin></script>
+        <script type="text/babel" src="overlay.js"></script>
+    </body>
+</html>
