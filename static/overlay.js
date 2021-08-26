@@ -24,7 +24,8 @@ class Alerts extends React.Component {
         this.timerId = null;
         this.socket = new WebSocket('wss://' + window.location.hostname +'/ws');
     }
-    audio = new Audio('/overlay/follower_chord.wav');
+    follow_audio = new Audio('follower_chord.wav');
+    raid_audio = new Audio('raid.wav');
 
     componentDidMount() {
         this.socket.onmessage = (data) => {
@@ -52,7 +53,7 @@ class Alerts extends React.Component {
             follows: currFollows
         })
         this.updateNotifyPanel(`Follow from ${name}`);
-        this.audio.play();
+        this.follow_audio.play();
     }
 
     updateNotifyPanel(message) {
@@ -74,6 +75,7 @@ class Alerts extends React.Component {
 
     raid(from, viewers) {
         this.updateNotifyPanel(`Raid by ${from} with a party of ${viewers}`)
+        this.raid_audio.play();
     }
 
     listFollowers() {
