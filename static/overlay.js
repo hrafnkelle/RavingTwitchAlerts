@@ -1,56 +1,27 @@
 'use strict';
 
-Number.prototype.pad = function(n) {
-    if (n==undefined)
-        n = 2;
-
-    return (new Array(n).join('0') + this).slice(-n);
-}
-
-
-class Clock extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { 
-        time: this.timeString()
-    };
-  }
-
-  componentDidMount() {
-    this.intervalID = setInterval(
-      () => this.tick(),
-      1000
-    );
-  }
-
-  componentWillUnmount() {
-    clearInterval(this.intervalID);
-  }
-
-  timeString() {
-      var now = new Date();
-      return `${now.getUTCHours().pad()}:${now.getUTCMinutes().pad()}:${now.getUTCSeconds().pad()}`;
-  }
-  tick() {
-    this.setState({
-      time: this.timeString()
-    });
-  }
-
-  render() {
+function BottomScroller(props) {
     return (
-        <h1><img src="clock_small.png"/> {this.state.time} <img src="gpsicon_small.png"/> Iceland</h1>
+        <h1>Latest followers: {props.txt}</h1>
     );
-  }
 }
+
+function Notifier(props) {
+    return (
+        props.txt?<div id="notification">{props.txt}</div>:null
+    );
+}
+
 
 class Alerts extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
             event: null,
-            follows: Array(5)
+            follows: Array(5),
+            notifymsg : null
         }
+        this.timerId = null;
         this.socket = new WebSocket('wss://' + window.location.hostname +'/ws');
     }
     audio = new Audio('/overlay/follower_chord.wav');
@@ -62,6 +33,8 @@ class Alerts extends React.Component {
             var event = JSON.parse(data.data)
             if (event.subscription.type == 'channel.follow')
                 this.newFollow(event.event.user_name)
+            else if (event.subscription.type == 'channel.raid')
+                this.raid(event.event.from_broadcaster_user_name, event.event.viewers)
         }
     }
 
@@ -78,24 +51,53 @@ class Alerts extends React.Component {
         this.setState({
             follows: currFollows
         })
+        this.updateNotifyPanel(`Follow from ${name}`);
         this.audio.play();
     }
 
-    render() {
+    updateNotifyPanel(message) {
+        this.setState({
+            notifymsg: message
+        });
+        if (this.timerId) {
+            clearTimeout(this.timerId);
+        }
+        this.timerId = setTimeout(()=>{this.resetNotify()}, 5000);
+    }
+
+    resetNotify() {
+        this.setState({
+            notifymsg: null
+        });
+        this.timerId = null;
+    }
+
+    raid(from, viewers) {
+        this.updateNotifyPanel(`Raid by ${from} with a party of ${viewers}`)
+    }
+
+    listFollowers() {
         var followers = ""
         this.state.follows.forEach((who)=> {
             followers += `// ${who} `
         })
+        return followers;
+    }
+    
+    render() {
         return (
-            <h1>Latest follows: {followers}</h1>
+            <div className="overlay">
+                <div >
+                    <Notifier txt={this.state.notifymsg}/>
+                </div>
+                <div id="bottom_scroller">
+                    <BottomScroller txt={this.listFollowers()}/>
+                </div>
+            </div>
         )
     }
 }
 
-const domContainer = document.querySelector('#clock');
-const e = React.createElement;
-ReactDOM.render(e(Clock), domContainer);
-
-const domContainer2 = document.querySelector('#bottom_scroller');
+const domContainer = document.querySelector('#alert_root');
 const ee = React.createElement;
-ReactDOM.render(ee(Alerts), domContainer2);
+ReactDOM.render(ee(Alerts), domContainer);

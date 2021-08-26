@@ -7,12 +7,12 @@
         <style>  
         body {
             color: #f5ca4a;
+            font-family: 'Roboto', sans-serif;
         }
         #bottom_scroller {
             position: absolute;
             bottom: 0;
             left: 50px;
-            font-family: 'Roboto', sans-serif;
         }
 
         #clock {
@@ -24,17 +24,27 @@
             vertical-align:middle;
         }
 
+        #notification {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-50%);
+            background-color: #f5ca4a;
+            color: #2b2f3c;
+            font-size: xx-large;
+            padding: 50px;
+        }
          </style>  
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />  
-        <title>Untitled Document</title>  
+        <title>Twitch Overlay</title>  
     </head>  
     <body>
         <div id="clock"></div>
-        <div id="bottom_scroller"></div>
-
+        <div id="alert_root"></div>
         <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
         <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
         <script src="https://unpkg.com/babel-standalone@6/babel.min.js" crossorigin></script>
         <script type="text/babel" src="overlay.js"></script>
+        <script type="text/babel" src="clock.js"></script>
     </body>
 </html>
