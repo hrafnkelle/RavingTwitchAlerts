@@ -36,6 +36,19 @@ class Alerts extends React.Component {
                 this.newFollow(event.event.user_name)
             else if (event.subscription.type == 'channel.raid')
                 this.raid(event.event.from_broadcaster_user_name, event.event.viewers)
+            else if (event.subscription.type == 'channel.subscribe')
+                this.subscribe(event.event.user_name, event.event.tier)
+            else if (event.subscription.type == 'channel.cheer')
+                this.cheer(event.event.user_name, event.event.bits)
+            else if (event.subscription.type == 'channel.subscription.gift') {
+                if(event.event.is_anonymous)
+                    this.cheer("Anonymous", event.event.bits)
+                else
+                    this.cheer(event.event.user_name, event.event.total)
+            }
+            else {
+                console.log(`Unknown event ${event.subscription.type}`)
+            }
         }
     }
 
@@ -76,6 +89,21 @@ class Alerts extends React.Component {
     raid(from, viewers) {
         this.updateNotifyPanel(`Raid by ${from} with a party of ${viewers}`)
         this.raid_audio.play();
+    }
+
+    cheer(from, bits) {
+        this.updateNotifyPanel(`${from} cheered  ${bits} bits`)
+        this.follow_audio.play();
+    }
+
+    subscribe(from, tier) {
+        this.updateNotifyPanel(`${from} subscribed at ${tier} tier`)
+        this.follow_audio.play();
+    }
+
+    gifted(from, count) {
+        this.updateNotifyPanel(`${from} gifted ${count} subscriptions`)
+        this.follow_audio.play();
     }
 
     listFollowers() {
