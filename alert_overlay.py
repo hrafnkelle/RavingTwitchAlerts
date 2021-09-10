@@ -2,10 +2,12 @@ from aiohttp import web
 import aiohttp
 import hmac
 import os
+import logging
 
 from aiohttp.web_middlewares import middleware
 from aiohttp.web_ws import WebSocketResponse
 
+LOG_FILENAME = 'twitch.log'
 
 try:
     TWITCH_CLIENT_ID = os.environ["TWITCH_CLIENT_ID"]
@@ -47,6 +49,8 @@ async def verifyTwitchSignature(req: web.Request, handler):
 async def webhook(request: web.Request):
     messageType = request.headers['Twitch-Eventsub-Message-Type']
     body = await request.json()
+    logging.debug(request.headers)
+    logging.debug(await request.text())
     if messageType == "webhook_callback_verification":
         print("Verifying webhook")
         return web.Response(text=body['challenge'])
@@ -56,9 +60,8 @@ async def webhook(request: web.Request):
     else:
         event = body['event']
         type = body['subscription']['type']
-        print(f'receiving {type} req for {event["broadcaster_user_name"]}')
+        print(f'receiving {type} req for {event.get("broadcaster_user_name","Unknown")}')
         print(event)
-        print("app = ", app)
         to_delete = []
         for ws in request.app['ws']:
             try:
@@ -93,9 +96,11 @@ async def websocketHandler(request: web.Request):
 
 app = web.Application(middlewares=[verifyTwitchSignature])
 app['ws'] = []
-app.add_routes([web.get('/', hello),
-                web.post('/webhooks/callback', webhook),
+app.add_routes([web.post('/webhooks/callback', webhook),
                 web.get('/ws', websocketHandler),
                 web.static('/overlay', 'static/')])
-print("app=",app)
+logging.basicConfig(level=logging.DEBUG, filename=LOG_FILENAME)
+console = logging.StreamHandler()  
+console.setLevel(logging.INFO)  
+logging.getLogger("").addHandler(console)
 web.run_app(app, port=3000)
