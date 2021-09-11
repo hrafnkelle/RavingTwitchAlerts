@@ -62,18 +62,21 @@ async def webhook(request: web.Request):
         type = body['subscription']['type']
         print(f'receiving {type} req for {event.get("broadcaster_user_name","Unknown")}')
         print(event)
-        to_delete = []
-        for ws in request.app['ws']:
-            try:
-                await ws.send_json(body)
-            except:
-                to_delete.append(ws)
-        ws: WebSocketResponse
-        for ws in to_delete:
-            print(f"removing {ws}")
-            request.app['ws'].remove(ws)
- 
+        await sendToWebsockets(request, body)
         return web.Response(text="Takk")
+
+async def sendToWebsockets(request, data):
+    to_delete = []
+    for ws in request.app['ws']:
+        try:
+            await ws.send_json(data)
+        except:
+            to_delete.append(ws)
+    ws: WebSocketResponse
+    for ws in to_delete:
+        print(f"removing {ws}")
+        request.app['ws'].remove(ws)
+
 
 async def websocketHandler(request: web.Request):
     ws = WebSocketResponse()
@@ -93,11 +96,23 @@ async def websocketHandler(request: web.Request):
     print('websocket connection closed')
     return ws
 
+async def authHandler(request: web.Request):
+    for k,v in request.rel_url.query:
+        print(f'{k}:{v}')
+    logging.info(request.query_string)
+    return web.Response(text='AuthReceived')
+
+async def injectHandler(request: web.Request):
+    body = await request.json()
+    await sendToWebsockets(request, body)
+    return web.Response(text='OK Boomer')
 
 app = web.Application(middlewares=[verifyTwitchSignature])
 app['ws'] = []
 app.add_routes([web.post('/webhooks/callback', webhook),
+                web.post('/inject', injectHandler),
                 web.get('/ws', websocketHandler),
+                web.get('/auth', authHandler),
                 web.static('/overlay', 'static/')])
 logging.basicConfig(level=logging.DEBUG, filename=LOG_FILENAME)
 console = logging.StreamHandler()  

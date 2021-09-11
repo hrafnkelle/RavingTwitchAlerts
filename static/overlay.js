@@ -6,6 +6,12 @@ function BottomScroller(props) {
     );
 }
 
+function TopScroller(props) {
+    return (
+        <h1>Latest subs: {props.txt}</h1>
+    )
+}
+
 function Notifier(props) {
     return (
         props.txt?<div id="notification">{props.txt}</div>:null
@@ -19,6 +25,7 @@ class Alerts extends React.Component {
         this.state = {
             event: null,
             follows: Array(5),
+            subs: Array(5),
             notifymsg : null
         }
         this.timerId = null;
@@ -97,6 +104,14 @@ class Alerts extends React.Component {
     }
 
     subscribe(from, tier) {
+        var currSubs = this.state.subs
+        if (currSubs.length >= 5)
+            currSubs.shift()
+        currSubs.push(from)
+        this.setState({
+            subs: currSubs
+        })
+        console.dir(currSubs)
         this.updateNotifyPanel(`${from} subscribed at ${tier} tier`)
         this.follow_audio.play();
     }
@@ -113,10 +128,21 @@ class Alerts extends React.Component {
         })
         return followers;
     }
+
+    listSubs() {
+        var subs = ""
+        this.state.subs.forEach((who)=> {
+            subs += `// ${who} `
+        })
+        return subs;
+    }
     
     render() {
         return (
             <div className="overlay">
+                <div id="top_scroller">
+                    <TopScroller txt={this.listSubs()}/>
+                </div>
                 <div >
                     <Notifier txt={this.state.notifymsg}/>
                 </div>
