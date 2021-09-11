@@ -27,10 +27,10 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             except yaml.YANLError as exc:
                 print(exc)
 
-        self.reactor.scheduler.execute_every(120, self.say_bot)        
+        self.reactor.scheduler.execute_every(300, self.say_bot)        
 
     def say_bot(self):
-        self.connection.privmsg(self.channel, "I'm a bot!")
+        self.connection.privmsg(self.channel, "I'm a bot! RavingHelmet created me. I know a few !commands")
 
     def on_welcome(self, c, e):
         print(f'Joining {self.channel}')
@@ -53,7 +53,10 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
     def do_command(self, e, cmd):
         c = self.connection
 
-        if cmd in self.commands:
+        if cmd == "commands":
+            cmdlist = ', '.join(["!"+k for k in self.commands])
+            c.privmsg(self.channel, f"I know {cmdlist}")
+        elif cmd in self.commands:
             c.privmsg(self.channel, self.commands[cmd])
 
         # The command was not recognized
