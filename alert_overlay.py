@@ -1,11 +1,8 @@
-import time
-import random
 import asyncio
 import hmac
 import os
 import logging
 import aiohttp
-import yaml
 from aiohttp import web
 from aiohttp.web_middlewares import middleware
 from aiohttp.web_ws import WebSocketResponse
@@ -113,13 +110,13 @@ async def websocketHandler(request: web.Request):
         if msg.type == aiohttp.WSMsgType.TEXT:
             if msg.data == 'close':
                 await ws.close()
-                print('ws closed')
+                logging.info('ws closed')
             else:
                 await ws.send_str(msg.data + '/answer')
         elif msg.type == aiohttp.WSMsgType.ERROR:
-            print('ws connection closed with exception %s' % ws.exception())
+            logging.warning('ws connection closed with exception %s' % ws.exception())
             
-    print('websocket connection closed')
+    logging.info('websocket connection closed')
     return ws
 
 
@@ -127,7 +124,7 @@ async def push_data(app):
     while True:
         dataset = app['sim'].getFlightStatusVars()
         if not dataset['connected']:
-            print("No flightim connection")
+            logging.info("No flightim connection")
         else:
             airport_id, distance = airport.getClosestAirport(dataset['PLANE_LATITUDE'], dataset['PLANE_LONGITUDE'])
             dataset['CLOSEST_AIRPORT_ID'] = airport_id

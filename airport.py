@@ -32,7 +32,6 @@ def rebuildIdx():
 
 
 def getClosestAirport(lat, lon, dist=100.0):
-    print(lat, lon)
     somewhere = GeoLocation.from_degrees(lat or 0.0, lon or 0.0)
     sw, ne = somewhere.bounding_locations(dist)
     closest_dist = 100000000000000000000
