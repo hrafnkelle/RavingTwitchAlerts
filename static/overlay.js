@@ -36,6 +36,8 @@ class Alerts extends React.Component {
             oat: 0,
             fuel_quant: 0,
             fuel_cap: 0,
+            closest_airport_id: null,
+            closest_airport_distance: null,
             onground: true
         }
         this.timerId = null;
@@ -110,7 +112,9 @@ class Alerts extends React.Component {
                 oat: event.AMBIENT_TEMPERATURE,
                 fuel_quant: event.FUEL_TOTAL_QUANTITY,
                 fuel_cap: event.FUEL_TOTAL_CAPACITY,
-                onground: event.SIM_ON_GROUND==1?true:false            
+                onground: event.SIM_ON_GROUND==1?true:false,
+                closest_airport_id: event.CLOSEST_AIRPORT_ID,
+                closest_airport_distance: event.CLOSEST_AIRPORT_DISTANCE        
             });
         }
         else {
@@ -224,7 +228,8 @@ class Alerts extends React.Component {
         const heading = (this.state.heading || 0).toFixed();
         const oat = (this.state.oat || 0).toFixed() ;
         const fuel = ((100.0*(this.state.fuel_quant/this.state.fuel_cap)) || 0).toFixed();
-        return `IAS: ${ias} kts GS: ${gs} kts VS: ${vs} fpm ALT: ${alt} ft HDG: ${heading}° FUEL: ${fuel}% OAT ${oat}°C`
+        const airport = (this.state.closest_airport_id || "--")
+        return `Near: ${airport} IAS: ${ias} kts GS: ${gs} kts VS: ${vs} fpm ALT: ${alt} ft HDG: ${heading}° FUEL: ${fuel}% OAT ${oat}°C`
     }
 
     

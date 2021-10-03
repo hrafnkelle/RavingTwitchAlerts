@@ -11,7 +11,7 @@ from aiohttp.web_middlewares import middleware
 from aiohttp.web_ws import WebSocketResponse
 
 from simtwitchbridge import SimTwitchBridge 
-
+import airport
 
 LOG_FILENAME = 'twitch.log'
 
@@ -128,9 +128,12 @@ async def push_data(app):
         dataset = app['sim'].getFlightStatusVars()
         if not dataset['connected']:
             print("No flightim connection")
-
+        else:
+            airport_id, distance = airport.getClosestAirport(dataset['PLANE_LATITUDE'], dataset['PLANE_LONGITUDE'])
+            dataset['CLOSEST_AIRPORT_ID'] = airport_id
+            dataset['CLOSEST_AIRPORT_DISTANCE'] = distance
         await sendToWebsockets(app, {'type': 'simconnect', 'event': dataset})
-        await asyncio.sleep(1)
+        await asyncio.sleep(2)
 
 
 async def authHandler(request: web.Request):

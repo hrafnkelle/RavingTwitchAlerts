@@ -9,7 +9,7 @@ $body = @"
     "type": "channel.channel_points_custom_reward_redemption.add",
     "version": "1",
     "condition": {
-        "broadcaster_user_id": "$env:IRC_OWNER"
+        "broadcaster_user_id": "$env:TWITCH_OWNER"
     },
     "transport": {
         "method": "webhook",
