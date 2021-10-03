@@ -1,29 +1,36 @@
-from aiohttp import web
-import aiohttp
+import time
+import random
+import asyncio
 import hmac
 import os
 import logging
-
+import aiohttp
+import yaml
+from aiohttp import web
 from aiohttp.web_middlewares import middleware
 from aiohttp.web_ws import WebSocketResponse
+
+from simtwitchbridge import SimTwitchBridge 
+
 
 LOG_FILENAME = 'twitch.log'
 
 try:
     TWITCH_CLIENT_ID = os.environ["TWITCH_CLIENT_ID"]
     TWITCH_CLIENT_SECRET = os.environ["TWITCH_CLIENT_SECRET"]
+    TWITCH_BEARER_OAUTH = os.environ["TWITCH_BEARER_OAUTH"]
 except KeyError:
-    print("Make sure TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET are set as environment")
+    logging.error("Make sure TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET and TWITCH_BEARER_OAUTH are set as environment")
+    for k,v in os.environ.items():
+        logging.error(f"{k}:{v}")
     exit(-1)
 
-async def hello(request):
-    return web.Response(text="Hello, world")
 
 @middleware
 async def verifyTwitchSignature(req: web.Request, handler):
     messageId = req.headers.get('Twitch-Eventsub-Message-Id',None)
     if messageId is None:
-        print("No message id")
+        logging.debug("No message id")
         return await handler(req)
     else:
         messageId = messageId.encode()
@@ -39,12 +46,29 @@ async def verifyTwitchSignature(req: web.Request, handler):
     c.update(timestamp)
     c.update(await req.read())
     computedSignature = "sha256="+c.hexdigest()
-
-#    print(f'Recv sig {messageSignature}, comp sig {computedSignature}')
     
     if computedSignature!=messageSignature:
         return web.Response(status=403, reason="verification failed")
     return resp
+
+async def fulfilRedeption(broadcaster_id, reward_id, event_id):
+    async with aiohttp.ClientSession() as session:
+        headers = {'Content-tType': 'application/json',
+                    'client-id': TWITCH_CLIENT_ID,
+                    'Authorization': f"Bearer {TWITCH_BEARER_OAUTH}"}
+        urlparam = {'broadcaster_id': broadcaster_id,
+                        'reward_id': reward_id,
+                        'id': event_id
+                    }
+        async with session.patch("https://api.twitch.tv/helix/channel_points/custom_rewards/redemptions", headers=headers, params=urlparam, json={'status': 'FULFILLED'}) as resp:
+            print(resp.status)
+            print(await resp.text())
+
+async def handleRewardRedemtionAdd(event):
+    sim = app['sim'] # type: SimTwitchBridge
+    sim.doReward(event['reward']['id'])
+
+    await fulfilRedeption(event['broadcaster_user_id'], event['reward']['id'], event['id'])
 
 async def webhook(request: web.Request):
     messageType = request.headers['Twitch-Eventsub-Message-Type']
@@ -60,14 +84,16 @@ async def webhook(request: web.Request):
     else:
         event = body['event']
         type = body['subscription']['type']
-        print(f'receiving {type} req for {event.get("broadcaster_user_name","Unknown")}')
-        print(event)
-        await sendToWebsockets(request, body)
-        return web.Response(text="Takk")
+        print(f'{messageType}: receiving {type} req for {event.get("broadcaster_user_name","Unknown")}')
+        print(body)
+        if type == "channel.channel_points_custom_reward_redemption.add":
+            await handleRewardRedemtionAdd(event)
+        await sendToWebsockets(request.app, {'type': 'twitch', 'event': body})
+        return web.Response(text="Takk")    
 
-async def sendToWebsockets(request, data):
+async def sendToWebsockets(app, data):
     to_delete = []
-    for ws in request.app['ws']:
+    for ws in app['ws']:
         try:
             await ws.send_json(data)
         except:
@@ -75,7 +101,7 @@ async def sendToWebsockets(request, data):
     ws: WebSocketResponse
     for ws in to_delete:
         print(f"removing {ws}")
-        request.app['ws'].remove(ws)
+        app['ws'].remove(ws)
 
 
 async def websocketHandler(request: web.Request):
@@ -96,6 +122,26 @@ async def websocketHandler(request: web.Request):
     print('websocket connection closed')
     return ws
 
+
+async def push_data(app):
+    while True:
+        dataset = app['sim'].getFlightStatusVars()
+        if not dataset['connected']:
+            print("No flightim connection")
+
+        await sendToWebsockets(app, {'type': 'simconnect', 'event': dataset})
+        await asyncio.sleep(1)
+
+
+async def authHandler(request: web.Request):
+    for k,v in request.rel_url.query:
+        print(f'{k}:{v}')
+    print(request.query_string)
+    return web.Response(text='AuthReceived')        
+
+async def start_background_tasks(app):
+    asyncio.create_task(push_data(app))
+
 async def authHandler(request: web.Request):
     for k,v in request.rel_url.query:
         print(f'{k}:{v}')
@@ -105,17 +151,15 @@ async def authHandler(request: web.Request):
 async def injectHandler(request: web.Request):
     body = await request.json()
     await sendToWebsockets(request, body)
-    return web.Response(text='OK Boomer')
+    return web.Response(text='OK Boomer')    
 
-app = web.Application(middlewares=[verifyTwitchSignature])
+app = web.Application()
 app['ws'] = []
-app.add_routes([web.post('/webhooks/callback', webhook),
-                web.post('/inject', injectHandler),
-                web.get('/ws', websocketHandler),
+app['sim'] = SimTwitchBridge()
+app.add_routes([web.get('/ws', websocketHandler),
+                web.static('/overlay', 'static/'),
                 web.get('/auth', authHandler),
-                web.static('/overlay', 'static/')])
-logging.basicConfig(level=logging.DEBUG, filename=LOG_FILENAME)
-console = logging.StreamHandler()  
-console.setLevel(logging.INFO)  
-logging.getLogger("").addHandler(console)
-web.run_app(app, port=3000)
+                web.post('/webhooks/callback', webhook)])
+app.on_startup.append(start_background_tasks)
+
+web.run_app(app, port=3001)

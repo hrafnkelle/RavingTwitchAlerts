@@ -2,13 +2,13 @@
 
 function BottomScroller(props) {
     return (
-        <h1>Latest followers: {props.txt}</h1>
+        <h1>{props.txt}</h1>
     );
 }
 
 function TopScroller(props) {
     return (
-        <h1>Latest subs: {props.txt}</h1>
+        <h1>{props.txt}</h1>
     )
 }
 
@@ -26,36 +26,97 @@ class Alerts extends React.Component {
             event: null,
             follows: Array(5),
             subs: Array(5),
-            notifymsg : null
+            notifymsg : null,
+            simconnected: false,
+            ias: 0,
+            gs: 0,
+            vs: 0,
+            heading: 0,
+            alt: 0,
+            oat: 0,
+            fuel_quant: 0,
+            fuel_cap: 0,
+            onground: true
         }
         this.timerId = null;
-        this.socket = new WebSocket('wss://' + window.location.hostname +'/ws');
+        this.intervalID = null;
+        this.socket = new WebSocket('ws://' + window.location.hostname + ':' + window.location.port +'/ws');
     }
     follow_audio = new Audio('follower_chord.wav');
     raid_audio = new Audio('raid.wav');
 
     componentDidMount() {
+        this.registerWsHandlers();
+        this.intervalID = setInterval(
+            () => this.tick(),
+            1000
+          );        
+    }
+
+    registerWsHandlers() {
         this.socket.onmessage = (data) => {
-            console.dir(data.data);
-            
-            var event = JSON.parse(data.data)
-            if (event.subscription.type == 'channel.follow')
-                this.newFollow(event.event.user_name)
-            else if (event.subscription.type == 'channel.raid')
-                this.raid(event.event.from_broadcaster_user_name, event.event.viewers)
-            else if (event.subscription.type == 'channel.subscribe')
-                this.subscribe(event.event.user_name, event.event.tier)
-            else if (event.subscription.type == 'channel.cheer')
-                this.cheer(event.event.user_name, event.event.bits)
-            else if (event.subscription.type == 'channel.subscription.gift') {
-                if(event.event.is_anonymous)
-                    this.cheer("Anonymous", event.event.bits)
-                else
-                    this.cheer(event.event.user_name, event.event.total)
-            }
+            //console.dir(data.data);
+            var incoming = JSON.parse(data.data)
+            if (incoming.type == "twitch")
+                this.handleTwitchEvent(incoming.event)
+            else if (incoming.type == "simconnect")
+                this.handleSimconnectEvent(incoming.event)
             else {
-                console.log(`Unknown event ${event.subscription.type}`)
+                console.error("Unknown message type")
+                dir(incoming)
             }
+        }
+    }
+
+    tick() {
+        if(this.socket.readyState ===  WebSocket.CLOSED) {
+            this.socket = new WebSocket('ws://' + window.location.hostname + ':' + window.location.port +'/ws');
+            this.registerWsHandlers();
+        }
+    }
+
+    handleTwitchEvent(event) {
+        if (event.subscription.type == 'channel.follow')
+            this.newFollow(event.event.user_name)
+        else if (event.subscription.type == 'channel.raid')
+            this.raid(event.event.from_broadcaster_user_name, event.event.viewers)
+        else if (event.subscription.type == 'channel.subscribe')
+            this.subscribe(event.event.user_name, event.event.tier)
+        else if (event.subscription.type == 'channel.cheer')
+            this.cheer(event.event.user_name, event.event.bits)
+        else if (event.subscription.type == 'channel.channel_points_custom_reward_redemption.add')
+            this.claimReward(event.event.user_name, event.event.reward.title);
+        else if (event.subscription.type == 'channel.subscription.gift') {
+            if(event.event.is_anonymous)
+                this.cheer("Anonymous", event.event.bits)
+            else
+                this.cheer(event.event.user_name, event.event.total)
+        }
+        else {
+            console.log(`Unknown twitch event ${event.subscription.type}`)
+        }
+
+    }
+
+    handleSimconnectEvent(event) {
+        if (event.connected) {
+            this.setState({
+                simconnected: true,
+                ias: event.AIRSPEED_INDICATED,
+                gs: event.GROUND_VELOCITY,
+                vs: event.VERTICAL_SPEED,
+                heading: event.MAGNETIC_COMPASS,
+                alt: event.PLANE_ALTITUDE,
+                oat: event.AMBIENT_TEMPERATURE,
+                fuel_quant: event.FUEL_TOTAL_QUANTITY,
+                fuel_cap: event.FUEL_TOTAL_CAPACITY,
+                onground: event.SIM_ON_GROUND==1?true:false            
+            });
+        }
+        else {
+            this.setState({
+                simconnected: false
+            })
         }
     }
 
@@ -66,6 +127,8 @@ class Alerts extends React.Component {
 
     newFollow(name) {
         var currFollows = this.state.follows
+        if (currFollows.includes(name))
+            return
         if (currFollows.length >= 5)
             currFollows.shift()
         currFollows.push(name)
@@ -121,12 +184,28 @@ class Alerts extends React.Component {
         this.follow_audio.play();
     }
 
+    claimReward(from, rewardName) {
+        this.updateNotifyPanel(`${from} claimed ${rewardName}!`);
+        this.follow_audio.play();
+    }
+
     listFollowers() {
         var followers = ""
         this.state.follows.forEach((who)=> {
             followers += `// ${who} `
         })
         return followers;
+    }
+
+    listFollowSubs() {
+        var txt = ""
+        this.state.subs.forEach((who)=> {
+            txt += `// Sub: ${who} `
+        })
+        this.state.follows.forEach((who)=> {
+            txt += `// Follow: ${who} `
+        })
+        return txt;
     }
 
     listSubs() {
@@ -136,18 +215,30 @@ class Alerts extends React.Component {
         })
         return subs;
     }
+
+    simString() {
+        const ias = (this.state.ias || 0).toFixed();
+        const gs = (this.state.gs || 0).toFixed();
+        const vs = (this.state.vs || 0).toFixed();
+        const alt = (this.state.alt || 0).toFixed();
+        const heading = (this.state.heading || 0).toFixed();
+        const oat = (this.state.oat || 0).toFixed() ;
+        const fuel = ((100.0*(this.state.fuel_quant/this.state.fuel_cap)) || 0).toFixed();
+        return `IAS: ${ias} kts GS: ${gs} kts VS: ${vs} fpm ALT: ${alt} ft HDG: ${heading}° FUEL: ${fuel}% OAT ${oat}°C`
+    }
+
     
     render() {
         return (
             <div className="overlay">
                 <div id="top_scroller">
-                    <TopScroller txt={this.listSubs()}/>
+                    <TopScroller txt={this.state.simconnected?this.simString():"Sim offline"}/>
                 </div>
                 <div >
                     <Notifier txt={this.state.notifymsg}/>
                 </div>
                 <div id="bottom_scroller">
-                    <BottomScroller txt={this.listFollowers()}/>
+                    <BottomScroller txt={this.listFollowSubs()}/>
                 </div>
             </div>
         )
