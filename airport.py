@@ -7,7 +7,8 @@ from rtree import index
 
 from geolocation import GeoLocation
 
-idx = index.Rtree('airports_idx.rtree')
+#idx = index.Rtree('airports_idx.rtree')
+idx = index.Index()
 
 @dataclass
 class AirportLoc:
