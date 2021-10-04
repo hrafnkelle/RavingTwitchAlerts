@@ -8,7 +8,11 @@ import pystray
 
 from PIL import Image, ImageDraw
 
+logging.basicConfig(filename='overlay.log', encoding='utf-8', level=logging.DEBUG)
+
 running = True
+with open('closestairport.txt','w') as f:
+    f.write(f"")
 
 def create_image():
     width = 128
@@ -37,12 +41,6 @@ icon = pystray.Icon('AirportOverlay', menu = menu)
 
 
 def setup(icon):
-    #global running
-#    if os.path.exists("airports_idx.rtree.dat"):
-#        os.remove("airports_idx.rtree.dat")
-#    if os.path.exists("airports_idx.rtree.idx"):
-#        os.remove("airports_idx.rtree.idx")
-#    time.sleep(2)
     connected = False
     icon.icon = img = create_image()
     icon.visible = True
@@ -57,6 +55,7 @@ def setup(icon):
             connected = True
         except:
             icon.title = "No sim running?"
+            logging.exception("No sim running?")
         time.sleep(2)
 
 
@@ -64,16 +63,20 @@ def setup(icon):
         try:
             lat = aq.get('PLANE_LATITUDE')
             lon = aq.get('PLANE_LONGITUDE')
-            print(lat, lon)
             ident, dist = airport.getClosestAirport(lat, lon)
             dist_nm = dist*0.53996
             with open('closestairport.txt','w') as f:
                 icon.title = f"{ident} is {dist:.2f} NM away"
                 f.write(f"{ident}")
-        except:
+        except Exception as e:
             icon.title = "Failed to get airport"
+            logging.exception("Failure while getting airport")
 
         time.sleep(2)
+
+        with open('closestairport.txt','w') as f:
+            f.write(f"")
+
 
 
 icon.run(setup=setup)
