@@ -1,5 +1,7 @@
 source_me.sh
-
+env.ps1
+airports_idx*
+rewards.yaml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -139,3 +141,4 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+closestairport.txt
