@@ -121,6 +121,7 @@ async def websocketHandler(request: web.Request):
 
 
 async def push_data(app):
+    airport.rebuildIdx()
     while True:
         dataset = app['sim'].getFlightStatusVars()
         if not dataset['connected']:
