@@ -9,7 +9,7 @@ import pyperclip
 
 from PIL import Image, ImageDraw
 
-logging.basicConfig(filename='overlay.log', encoding='utf-8', level=logging.DEBUG)
+logging.basicConfig(filename='overlay.log', filemode='wt', encoding='utf-8', level=logging.DEBUG)
 
 sm: SimConnect = None
 ae: AircraftEvents = None
