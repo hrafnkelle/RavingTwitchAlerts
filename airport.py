@@ -19,7 +19,7 @@ def rebuildIdx():
     try:
         con = sqlite3.connect(path.expandvars(r'%APPDATA%\ABarthel\little_navmap_db\little_navmap_msfs.sqlite'))
         cur = con.cursor()
-        cur.execute('SELECT airport_id, ident, left_lonx, right_lonx, top_laty, bottom_laty, laty, lonx FROM airport WHERE is_closed=0 AND is_addon=0')
+        cur.execute('SELECT airport_id, ident, left_lonx, right_lonx, top_laty, bottom_laty, laty, lonx FROM airport WHERE is_closed=0 AND num_runways>0')
         for row in cur:
             #print(row)
             airport_id, ident, left, right, top, bottom, laty, lonx = row
